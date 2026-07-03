@@ -41,6 +41,89 @@ Their software also has a feature that allows users to label their own TGs. The 
 - Using our laptops' webcams might be difficult if we want users to be able to point at the template while it is laying on top of a horizontal surface such as a table (and this is the way it would make sense to use the system I think, since it is intended for visually-impaired people). We could try to use our phones as input devices and a tripod, or somethig along these lines.
 - Watch the resolution/scale consistency between digital template and the printed+photographed version for correct mapping.
 
+
+
+
+
+---
+
+### [Textoshop: Interactions Inspired by Drawing Software to Facilitate Text Editing](Textoshop.pdf)
+
+Damien Masson, Young-Ho Kim, and Fanny Chevalier. 2025. Textoshop: Interactions Inspired by Drawing Software to Facilitate Text Editing. Proceedings of the 2025 CHI Conference on Human Factors in Computing Systems (CHI '25). https://doi.org/10.1145/3706598.3713862
+
+#### What is the paper about?
+
+Textoshop explores a new way of editing text by borrowing interaction techniques from drawing and image editing software such as Adobe Photoshop. Instead of relying on traditional text-editing operations (select, cut, copy, paste), text fragments become directly manipulable objects that can be dragged, resized, rotated, combined, or edited using tools such as brushes and layers. Large Language Models (LLMs) act as the backend that interprets these interactions and rewrites the selected text while preserving the user's intent.
+
+#### Notes on 2-week implementation for ITT
+
+##### Possible interactions to replicate
+
+**Direct Manipulation**
+
+- Drag & Drop text fragments
+> Instead of cut + paste, users can directly drag selected text fragments to a new position.
+
+- Resize
+> Dragging the resize handle expands or shortens the selected text. We could map the resize amount to prompts such as "expand" or "summarize" using an LLM.
+
+- Rotate
+> Rotating a text fragment changes its sentence structure while preserving the meaning. We could use an LLM to rewrite the sentence with a different clause order or voice.
+
+---
+
+**Text Editing Tools**
+
+- Tone Picker + Tone Brush
+> Users choose a writing style (e.g., formal/informal, positive/negative, simple/complex) and paint over text to apply it. We could implement this with a few sliders and generate a prompt based on their values.
+
+- Tone Eyedropper (optional)
+> Similar to Photoshop's eyedropper: sample the writing style from one paragraph and apply it to another.
+
+- Repair Tool (optional)
+> Brush over text to fix grammar and spelling.
+
+---
+
+##### Possible implementation
+
+Frontend
+
+- Simple text editor (HTML + JavaScript or PyQt)
+- Text fragments represented as draggable objects
+- Resize and rotation handles
+- Tone picker with sliders
+
+Backend
+
+- LLM API (OpenAI or Gemini)
+- Prompt templates for:
+  - expand
+  - summarize
+  - reorder sentence
+  - change writing style
+
+Example mapping
+
+- Drag → Move text (no AI required)
+- Resize larger → Expand text
+- Resize smaller → Summarize text
+- Rotate → Reorder sentence while preserving meaning
+- Tone Brush → Rewrite text according to selected writing style
+
+##### Some thoughts
+
+- The contribution of the paper is the interaction technique rather than the LLM itself.
+- We do not need to replicate the complete editor. Implementing two or three core interactions should already demonstrate the main idea.
+- The most interesting interactions seem to be Resize, Rotate, and Tone Picker, since they connect geometric manipulations with semantic text editing.
+- The biggest challenge is likely prompt engineering rather than programming. We need prompts that produce consistent results for different interaction strengths.
+- Using an existing LLM API (e.g., OpenAI or Gemini) should be sufficient since the paper itself also relies on an existing LLM backend.
+
+
+
+
+
+----
 ### Paper
 #### What is the paper about?
 #### Notes on 2-week implementation fot ITT
