@@ -120,11 +120,3 @@ Example mapping
 - Using an existing LLM API (e.g., OpenAI or Gemini) should be sufficient since the paper itself also relies on an existing LLM backend.
 
 
-
-
-
-----
-### Paper
-#### What is the paper about?
-#### Notes on 2-week implementation fot ITT
-
