@@ -9,7 +9,7 @@ MISS_THRESHOLD = (
 )
 
 MARKER_DICTIONARY = (
-    cv2.aruco.DICT_ARUCO_ORIGINAL
+    aruco.DICT_ARUCO_ORIGINAL
 )  # to match the markers generated using https://aruco-gen.netlify.app/
 
 # TODO: update once CamIO Creator's export format is defined
@@ -51,9 +51,9 @@ class ExplorerApp:
             raise RuntimeError(f"Could not open camera {self.camera_id}")
 
         # aruco markers setup - same as in Assignment 4
-        self.aruco_dict = cv2.aruco.getPredefinedDictionary(MARKER_DICTIONARY)
-        self.aruco_params = cv2.aruco.DetectorParameters()
-        self.detector = cv2.aruco.ArucoDetector(self.aruco_dict, self.aruco_params)
+        self.aruco_dict = aruco.getPredefinedDictionary(MARKER_DICTIONARY)
+        self.aruco_params = aruco.DetectorParameters()
+        self.detector = aruco.ArucoDetector(self.aruco_dict, self.aruco_params)
 
         # template detection state
         self.last_source = (
@@ -178,7 +178,8 @@ class ExplorerApp:
         cam_img.blit(0, 0, 0)
 
         # NOTE: debug - draw the warped result as a picture-in-picture in the
-        # corner, just to visually confirm registration is correct
+        # corner, just to visually confirm registration is correct 
+        # This debug feature was implemented with help of Claude AI (Anthropic)
         if self.transformation_matrix is not None:
             warped = self.warp_frame(frame, self.transformation_matrix)
             warped_img = cv2glet(warped, "BGR")
