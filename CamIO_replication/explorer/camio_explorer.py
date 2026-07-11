@@ -132,6 +132,10 @@ class ExplorerApp:
             (OUTPUT_WIDTH, OUTPUT_HEIGHT),
             flags=cv2.INTER_LINEAR,
         )
+    
+    def detect_pointing_gesture(self):
+        # index finger -> landmarks 5-8 (8: tip)
+        pass
 
     # NOTE: debug - draws a box around each detected marker and labels it with its ID
     def draw_marker_debug(self, frame, corners, ids):

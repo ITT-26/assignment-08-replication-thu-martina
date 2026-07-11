@@ -6,7 +6,7 @@ from pathlib import Path
 import pyglet
 import cv2
 
-from camio_explorer import ExplorerApp
+from explorer.camio_explorer import ExplorerApp
 
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 
