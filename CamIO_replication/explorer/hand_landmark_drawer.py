@@ -1,48 +1,80 @@
-# code from google mediapipe's code sample
-# https://developers.google.com/edge/mediapipe/solutions/vision/hand_landmarker/python
+# logic and landmark drawing adapted from a project I did in Argentina (playing rock-paper-scissors)
 
 import cv2
-import mediapipe as mp
-import numpy as np
+from math import dist
+from mediapipe.tasks.python import vision
 
-mp_hands = mp.tasks.vision.HandLandmarksConnections
-mp_drawing = mp.tasks.vision.drawing_utils
-mp_drawing_styles = mp.tasks.vision.drawing_styles
 
-MARGIN = 10  # pixels
-FONT_SIZE = 1
-FONT_THICKNESS = 1
-HANDEDNESS_TEXT_COLOR = (88, 205, 54) # vibrant green
+HAND_CONNECTIONS = [
+    (c.start, c.end) for c in vision.HandLandmarksConnections.HAND_CONNECTIONS
+]
 
-def draw_landmarks_on_image(rgb_image, detection_result):
-  hand_landmarks_list = detection_result.hand_landmarks
-  handedness_list = detection_result.handedness
-  annotated_image = np.copy(rgb_image)
+# landmarks for each finger
+FINGERS = {
+    "thumb": (1, 2, 3, 4),
+    "index": (5, 6, 7, 8),
+    "middle": (9, 10, 11, 12),
+    "ring": (13, 14, 15, 16),
+    "pinky": (17, 18, 19, 20),
+}
 
-  # Loop through the detected hands to visualize.
-  for idx in range(len(hand_landmarks_list)):
-    hand_landmarks = hand_landmarks_list[idx]
-    handedness = handedness_list[idx]
+# landmarks (middle, tip) -> used to decide whether a finger is flexed 
+FINGERS_TIPS = {
+    "thumb": (2, 4),
+    "index": (6, 8),
+    "middle": (10, 12),
+    "ring": (14, 16),
+    "pinky": (18, 20),
+}
 
-    # Draw the hand landmarks.
-    mp_drawing.draw_landmarks(
-      annotated_image,
-      hand_landmarks,
-      mp_hands.HAND_CONNECTIONS,
-      mp_drawing_styles.get_default_hand_landmarks_style(),
-      mp_drawing_styles.get_default_hand_connections_style()
-    )
+OPEN_COLOR = (0, 255, 0)    # green 
+CLOSED_COLOR = (0, 0, 255)  # red 
+LINE_COLOR = (255, 255, 255)
+WRIST_COLOR = (255, 255, 255)
 
-    # Get the top left corner of the detected hand's bounding box.
-    height, width, _ = annotated_image.shape
-    x_coordinates = [landmark.x for landmark in hand_landmarks]
-    y_coordinates = [landmark.y for landmark in hand_landmarks]
-    text_x = int(min(x_coordinates) * width)
-    text_y = int(min(y_coordinates) * height) - MARGIN
+# returns 'FINGER_NAME: True' if finger is flexed
+# to decide whether a finger is flexed, the distance from the palm to the middle landmark is compared 
+# with the distance from the palm to the tip landmark. If the tip is closer, then the finger is flexed.
+def fingers_state(hand_landmarks) -> dict:
 
-    # Draw handedness (left or right hand) on the image.
-    cv2.putText(annotated_image, f"{handedness[0].category_name}",
-                (text_x, text_y), cv2.FONT_HERSHEY_DUPLEX,
-                FONT_SIZE, HANDEDNESS_TEXT_COLOR, FONT_THICKNESS, cv2.LINE_AA)
+    palm = hand_landmarks[0]
+    closed = {}
+    for name, (middle_i, tip_i) in FINGERS_TIPS.items():
+        middle = hand_landmarks[middle_i]
+        tip = hand_landmarks[tip_i]
+        d_middle = dist((palm.x, palm.y), (middle.x, middle.y))
+        d_tip = dist((palm.x, palm.y), (tip.x, tip.y))
+        closed[name] = d_tip < d_middle
 
-  return annotated_image
+    # thumb - special case - palm reference is landmark 13
+    palm_thumb = hand_landmarks[13]
+    thumb_middle = hand_landmarks[2]
+    thumb_tip = hand_landmarks[4]
+    d_middle = dist((palm_thumb.x, palm_thumb.y), (thumb_middle.x, thumb_middle.y))
+    d_tip = dist((palm_thumb.x, palm_thumb.y), (thumb_tip.x, thumb_tip.y))
+    closed["thumb"] = d_tip < d_middle
+
+    return closed
+
+# paint landmarks red if finger is flexed - easy visual debug
+def draw_hand(frame, hand_landmarks) -> dict:
+
+    height, width, _ = frame.shape
+    cerrados = fingers_state(hand_landmarks)
+
+    puntos = [(int(lm.x * width), int(lm.y * height)) for lm in hand_landmarks]
+
+    for start_i, end_i in HAND_CONNECTIONS:
+        cv2.line(frame, puntos[start_i], puntos[end_i], LINE_COLOR, 2, cv2.LINE_AA)
+
+    landmark_a_dedo = {i: nombre for nombre, indices in FINGERS.items() for i in indices}
+
+    for i, (x, y) in enumerate(puntos):
+        dedo = landmark_a_dedo.get(i)
+        if dedo is None:
+            color = WRIST_COLOR  
+        else:
+            color = CLOSED_COLOR if cerrados[dedo] else OPEN_COLOR
+        cv2.circle(frame, (x, y), 5, color, -1, cv2.LINE_AA)
+
+    return cerrados

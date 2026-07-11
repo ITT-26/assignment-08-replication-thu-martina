@@ -1,9 +1,13 @@
+# note: this was coded with help from AI to quickly test hand_landmark_drawer.py
+
 import sys
 import time
 import cv2
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
+
+from hand_landmark_drawer import draw_hand
 
 VIDEO_ID = int(sys.argv[1]) if len(sys.argv) > 1 else 0
 MODEL_PATH = "./hand_landmarker.task"
@@ -36,16 +40,12 @@ while True:
     result = detector.detect_for_video(mp_frame, timestamp_ms)
 
     # --- debug: how many hands did it find this frame? ---
-    print(f"hands detected: {len(result.hand_landmarks)}")
+    # print(f"hands detected: {len(result.hand_landmarks)}")
 
-    # --- 3. draw landmarks manually (no drawing_utils, just plain circles) ---
-    height, width, _ = frame.shape
+    # --- 3. draw landmarks + finger state using the new drawer ---
     for hand_landmarks in result.hand_landmarks:
-        for landmark in hand_landmarks:
-            # landmark.x / .y are normalized [0, 1] -> convert to pixel coords
-            x_px = int(landmark.x * width)
-            y_px = int(landmark.y * height)
-            cv2.circle(frame, (x_px, y_px), 5, (0, 255, 0), -1)
+        closed = draw_hand(frame, hand_landmarks)
+        print(closed)
 
     cv2.imshow("hand landmarks", frame)
 
