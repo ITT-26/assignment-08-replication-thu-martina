@@ -2,7 +2,7 @@
   "format": "camio-creator-replica",
   "version": 2,
   "name": "CamIO Anatomy Demo",
-  "source_template": "creator/assets/body_anatomy.png",
+  "source_template": "creator\\assets\\body_anatomy.png",
   "template": "template.png",
   "color_map": "color_map.png",
   "printable_template": "printable_template.png",

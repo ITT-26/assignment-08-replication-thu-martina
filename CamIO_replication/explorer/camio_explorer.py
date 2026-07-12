@@ -8,6 +8,9 @@ import mediapipe as mp
 from mediapipe.tasks import python as mp_python
 from mediapipe.tasks.python import vision as mp_vision
 from PIL import Image
+import json
+import sounddevice as sd
+import soundfile as sf
 
 from explorer.hand_landmark_drawer import draw_hand
 
@@ -26,10 +29,6 @@ MEDIAPIPE_MODEL_PATH = Path(__file__).resolve().parent / "hand_landmarker.task"
 NUM_HANDS = 1  # only one hand needed for pointing
 
 INDEX_TIP = 8  # landmark no. for the tip of the index finger
-
-# TODO: update once CamIO Creator's export format is defined
-OUTPUT_WIDTH = 800
-OUTPUT_HEIGHT = 600
 
 
 # OpenCV -> pyglet function given in Assignment 4
@@ -55,10 +54,46 @@ def cv2glet(img, fmt):
     )
 
 
+# function to convert hex to rgb
+def hex_to_bgr(hex_color):
+    hex_color = hex_color.lstrip("#")
+    r = int(hex_color[0:2], 16)
+    g = int(hex_color[2:4], 16)
+    b = int(hex_color[4:6], 16)
+    return (b, g, r)
+
+
+# function to retrieve relevant info from Creator app's json output file
+def load_hotspots(project_dir):
+    project_dir = Path(project_dir)
+    json_path = project_dir / "project.camio.json"
+    data = json.loads(json_path.read_text())
+
+    hotspots = []
+    for h in data["hotspots"]:
+        audio_path = project_dir / h["audio"] if h["audio"] else None
+        hotspots.append(
+            {
+                "name": h["name"],
+                "color": hex_to_bgr(h["color"]),
+                "audio_path": audio_path,
+            }
+        )
+    return hotspots
+
+
 class ExplorerApp:
     def __init__(self, camera_id, template_path):
         self.camera_id = camera_id
         self.template_path = template_path
+
+        # hotspot / color map data
+        self.hotspots = load_hotspots(self.template_path)
+        color_map_path = Path(self.template_path) / "color_map.png"
+        self.color_map = cv2.imread(str(color_map_path))
+        self.output_height, self.output_width = self.color_map.shape[:2]
+
+        self.current_hotspot = None
 
         # camera setup
         self.cap = cv2.VideoCapture(self.camera_id)
@@ -106,10 +141,12 @@ class ExplorerApp:
         self.window_w = int(cam_w * window_scale)
         self.window_h = int(cam_h * window_scale)
 
-        self.window = pyglet.window.Window(self.window_w, self.window_h, caption="CamIO Explorer")
+        self.window = pyglet.window.Window(
+            self.window_w, self.window_h, caption="CamIO Explorer"
+        )
         # NOTE: debug for now
         self.status_label = pyglet.text.Label(
-            "Searching for markers...",
+            "...",
             font_size=16,
             x=10,
             y=self.window_h - 10,
@@ -156,9 +193,9 @@ class ExplorerApp:
         destination = np.float32(
             [
                 [0, 0],
-                [OUTPUT_WIDTH, 0],
-                [0, OUTPUT_HEIGHT],
-                [OUTPUT_WIDTH, OUTPUT_HEIGHT],
+                [self.output_width, 0],
+                [0, self.output_height],
+                [self.output_width, self.output_height],
             ]
         )
         return cv2.getPerspectiveTransform(source, destination)
@@ -167,7 +204,7 @@ class ExplorerApp:
         return cv2.warpPerspective(
             frame,
             mat,
-            (OUTPUT_WIDTH, OUTPUT_HEIGHT),
+            (self.output_width, self.output_height),
             flags=cv2.INTER_LINEAR,
         )
 
@@ -227,6 +264,32 @@ class ExplorerApp:
 
         return transformed_point
 
+    def get_hotspot_at(self, point):
+
+        if point is None:
+            return None
+
+        x, y = int(point[0]), int(point[1])
+        height, width, _ = self.color_map.shape
+
+        if not (0 <= x < width and 0 <= y < height):
+            return None
+
+        pixel_color = tuple(int(v) for v in self.color_map[y, x])  # BGR
+
+        for hotspot in self.hotspots:
+            if hotspot["color"] == pixel_color:
+                return hotspot
+
+        return None  # no associated color
+    
+    def play_hotspot_audio(self, hotspot):
+        if hotspot is None or hotspot["audio_path"] is None:
+            return
+        data, samplerate = sf.read(str(hotspot["audio_path"]))
+        sd.stop() 
+        sd.play(data, samplerate)
+
     # NOTE: debug - draws a box around each detected marker and labels it with its ID
     def draw_marker_debug(self, frame, corners, ids):
         if ids is None:
@@ -259,17 +322,27 @@ class ExplorerApp:
 
         self.template_point = self.map_to_template(self.pointing_point)
 
+        # debounce logic for hotspots
+        new_hotspot = self.get_hotspot_at(self.template_point)
+        if new_hotspot is not self.current_hotspot:
+            self.play_hotspot_audio(new_hotspot)
+        self.current_hotspot = new_hotspot
+
         if source is not None:
             self.last_source = source
             self.miss_count = 0
             self.transformation_matrix = self.perspective_transformation(source)
-            self.status_label.text = "Board registered"  # NOTE: debug for now
+            # self.status_label.text = "Board registered"  # NOTE: debug for now
         else:
             self.miss_count += 1
             if self.miss_count > MISS_THRESHOLD:
                 self.last_source = None
                 self.transformation_matrix = None
-            self.status_label.text = "Searching for markers..."  # NOTE: debug for now
+            # self.status_label.text = "Searching for markers..."  # NOTE: debug for now
+
+        # DEBUG visual feedback - TODO: paint hotspot on top of camera feedback
+        if self.current_hotspot is not None:
+            self.status_label.text = f"Pointing at: {self.current_hotspot['name']}"
 
         # draw raw camera feed as background
         cam_img = cv2glet(frame, "BGR")
@@ -279,9 +352,11 @@ class ExplorerApp:
         # corner, just to visually confirm registration is correct
         # This debug feature was implemented with help of Claude AI (Anthropic)
         if self.transformation_matrix is not None:
-            warped = self.warp_frame(frame, self.transformation_matrix)          
+            warped = self.warp_frame(frame, self.transformation_matrix)
             warped_img = cv2glet(warped, "BGR")
-            preview_w, preview_h = 240, int(240 * OUTPUT_HEIGHT / OUTPUT_WIDTH)
+            preview_w, preview_h = 240, int(
+                240 * self.output_height / self.output_width
+            )
             warped_img.blit(
                 self.window.width - preview_w - 10,
                 10,

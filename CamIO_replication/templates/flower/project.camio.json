@@ -12,7 +12,7 @@
       "name": "Stem",
       "description": "",
       "color": "#e74c3c",
-      "audio": "",
+      "audio": "audio/Stem.wav",
       "polygon": [
         [
           352.54,
@@ -196,7 +196,7 @@
       "name": "Petal",
       "description": "",
       "color": "#9b59b6",
-      "audio": "",
+      "audio": "audio/Petal.wav",
       "polygon": [
         [
           270.01,
