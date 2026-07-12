@@ -88,6 +88,7 @@ class ExplorerApp:
         self.hand_detector = mp_vision.HandLandmarker.create_from_options(hand_options)
 
         self.pointing_point = None
+        self.template_point = None
 
         # pyglet - TODO: check window size
         cam_w = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -192,6 +193,21 @@ class ExplorerApp:
             index_y = hand_landmarks[INDEX_TIP].y * height
             return index_x, index_y
 
+    # map the coordinates returned by detect_pointing_gesture to the template's
+    def map_to_template(self, point):
+        # point -> pointing coordinates related to captured camera w,h
+        if point is None:
+            return None
+        
+        if self.transformation_matrix is None:
+            return None
+         
+        point_np = np.array([[point]], dtype=np.float32) # format that perspectiveTransform() needs
+        transformed_point_np = cv2.perspectiveTransform(point_np, self.transformation_matrix)
+        transformed_point = (transformed_point_np[0][0][0], transformed_point_np[0][0][1])
+
+        return transformed_point
+
 
     # NOTE: debug - draws a box around each detected marker and labels it with its ID
     def draw_marker_debug(self, frame, corners, ids):
@@ -222,7 +238,9 @@ class ExplorerApp:
         source = self.detect_board(frame)
 
         self.pointing_point = self.detect_pointing_gesture(frame)
-        print(self.pointing_point)
+        # print(self.pointing_point) -- DEBUG
+
+        self.template_point = self.map_to_template(self.pointing_point)
 
         if source is not None:
             self.last_source = source
