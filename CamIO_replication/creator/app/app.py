@@ -250,6 +250,9 @@ class CreatorWindow(QMainWindow):
         if not self.current_hotspot:
             return
         filename, _ = QFileDialog.getOpenFileName(self, "Choose audio file", "", "Audio files (*.wav *.mp3 *.ogg *.m4a);;All files (*)",)
+        if not filename:
+            return  # case: user cancelled the dialog
+        
         template_name = Path(self.project.template_path).stem
         audio_dir = (Path(__file__).parent.parent/ "output"/ template_name/ "audio")
         audio_dir.mkdir(parents=True, exist_ok=True)
