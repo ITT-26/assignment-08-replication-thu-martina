@@ -9,10 +9,12 @@ import img2pdf
 
 DPI = 200
 # A4 page: 210mm x 297mm, chosen DPI (dots per inch) = 200, 1 inch = 25.4mm
-# PORTRAIT
+
+# PORTRAIT ---
 # A4_WIDTH_PX = 1654  # 210 / 25.4 * DPI
 # A4_HEIGHT_PX = 2339  # 297 / 25.4 * DPI
-# LANDSCAPE
+
+# LANDSCAPE ---
 A4_HEIGHT_PX = 1654  # 210 / 25.4 * DPI
 A4_WIDTH_PX = 2339  # 297 / 25.4 * DPI
 
