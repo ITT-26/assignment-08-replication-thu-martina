@@ -5,11 +5,16 @@ from PIL import Image, ImageDraw
 from .models import Project
 import cv2
 import numpy as np
+import img2pdf
 
+DPI = 200
 # A4 page: 210mm x 297mm, chosen DPI (dots per inch) = 200, 1 inch = 25.4mm
-A4_WIDTH_PX = 1654 # 210 / 25.4 * DPI
-A4_HEIGHT_PX = 2339 # 297 / 25.4 * DPI
-BORDER = 120  # margin, for the ArUco marker placement in the borders of the printable template
+A4_WIDTH_PX = 1654  # 210 / 25.4 * DPI
+A4_HEIGHT_PX = 2339  # 297 / 25.4 * DPI
+PRINT_MARGIN = 40
+MARKER_SIZE = 200
+BORDER = PRINT_MARGIN + MARKER_SIZE
+
 
 def get_printable_template_constants(template_size):
     template_width, template_height = template_size
@@ -21,6 +26,7 @@ def get_printable_template_constants(template_size):
     offset_x = (A4_WIDTH_PX - scaled_width) // 2
     offset_y = (A4_HEIGHT_PX - scaled_height) // 2
     return scale, offset_x, offset_y
+
 
 def export_project(project: Project, output_dir: Path) -> Path:
     # Export all project resources required by the Explorer,
@@ -40,8 +46,7 @@ def export_project(project: Project, output_dir: Path) -> Path:
             # we apply the scale and offset of the printable template to the polygons as well
             # for later mapping in the Explorer app
             transformed_polygon = [
-                (x * scale + offset_x, y * scale + offset_y)
-                for x, y in hotspot.polygon
+                (x * scale + offset_x, y * scale + offset_y) for x, y in hotspot.polygon
             ]
             draw_map.polygon(transformed_polygon, fill=hotspot.color)
 
@@ -49,16 +54,18 @@ def export_project(project: Project, output_dir: Path) -> Path:
 
     printable = make_printable_template(template)
     printable.save(output_dir / "printable_template.png")
-
+    make_printable_pdf(
+        output_dir / "printable_template.png", output_dir / "printable_template.pdf"
+    )
     project.save_json(output_dir / "project.camio.json")
 
     return output_dir
+
 
 def make_printable_template(template: Image.Image) -> Image.Image:
     """Create a printable template with real ArUco markers."""
     # CHANGE: the printable template is sized to a fixed A4 canvas to prevent
     # unwanted distortion when printing
-    marker_size = 100
 
     out = Image.new("RGB", (A4_WIDTH_PX, A4_HEIGHT_PX), "white")  # A4 size
 
@@ -72,13 +79,29 @@ def make_printable_template(template: Image.Image) -> Image.Image:
 
     dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_ARUCO_ORIGINAL)
     positions = [
-        (18, 18, 0),
-        (out.width - marker_size - 18, 18, 1),
-        (out.width - marker_size - 18, out.height - marker_size - 18, 2),
-        (18, out.height - marker_size - 18, 3),
+        (PRINT_MARGIN, PRINT_MARGIN, 0),
+        (out.width - MARKER_SIZE - PRINT_MARGIN, PRINT_MARGIN, 1),
+        (
+            out.width - MARKER_SIZE - PRINT_MARGIN,
+            out.height - MARKER_SIZE - PRINT_MARGIN,
+            2,
+        ),
+        (PRINT_MARGIN, out.height - MARKER_SIZE - PRINT_MARGIN, 3),
     ]
     for x, y, marker_id in positions:
-        marker = cv2.aruco.generateImageMarker(dictionary, marker_id, marker_size,)
+        marker = cv2.aruco.generateImageMarker(
+            dictionary,
+            marker_id,
+            MARKER_SIZE,
+        )
         marker = Image.fromarray(marker).convert("RGB")
         out.paste(marker, (x, y))
     return out
+
+
+# convert the printable png into a pdf -- added after facing problems printing the png directly
+# NOTE: found the img2pdf library online, asked AI for help to use it
+def make_printable_pdf(printable_png_path: Path, output_path: Path) -> None:
+    layout_fun = img2pdf.get_fixed_dpi_layout_fun((DPI, DPI))
+    with open(output_path, "wb") as f:
+        f.write(img2pdf.convert(str(printable_png_path), layout_fun=layout_fun))
