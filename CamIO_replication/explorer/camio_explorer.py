@@ -17,7 +17,7 @@ MISS_THRESHOLD = (
 
 MARKER_DICTIONARY = (
     aruco.DICT_ARUCO_ORIGINAL
-)  # to match the markers generated using https://aruco-gen.netlify.app/
+)  # to match the markers generated in the export/printable file from the Creator app's side
 
 MEDIAPIPE_MODEL_PATH = Path(__file__).resolve().parent / "hand_landmarker.task"
 
