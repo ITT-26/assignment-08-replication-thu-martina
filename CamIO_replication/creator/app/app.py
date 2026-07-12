@@ -19,7 +19,7 @@ class CreatorWindow(QMainWindow):
     def __init__(self, image_path: Path):
         super().__init__()
         template_name = image_path.stem
-        project_file = (Path(__file__).parent.parent/ "output"/ template_name/ "project.camio.json")
+        project_file = (Path(__file__).parent.parent.parent/ "templates"/ template_name/ "project.camio.json")
         if project_file.exists():
             self.project = Project.load(project_file)
         else:
@@ -254,7 +254,7 @@ class CreatorWindow(QMainWindow):
             return  # case: user cancelled the dialog
         
         template_name = Path(self.project.template_path).stem
-        audio_dir = (Path(__file__).parent.parent/ "output"/ template_name/ "audio")
+        audio_dir = (Path(__file__).parent.parent.parent/ "templates"/ template_name/ "audio")
         audio_dir.mkdir(parents=True, exist_ok=True)
 
         target = audio_dir / Path(filename).name
@@ -310,7 +310,7 @@ class CreatorWindow(QMainWindow):
         # Export the complete project (JSON, color map,
         # template image and audio files) into the output folder.
         template_name = Path(self.project.template_path).stem
-        out_dir = (Path(__file__).parent.parent/ "output"/ template_name)
+        out_dir = (Path(__file__).parent.parent.parent/ "templates"/ template_name)
         print("Template:", self.project.template_path)
         print("Output:", out_dir)
         export_project(self.project, out_dir)
@@ -362,7 +362,7 @@ class CreatorWindow(QMainWindow):
         audio = np.concatenate(self.recorded_audio, axis=0)
 
         template_name = Path(self.project.template_path).stem
-        audio_dir = (Path(__file__).parent.parent / "output"/ template_name/ "audio")
+        audio_dir = (Path(__file__).parent.parent.parent/ "templates"/ template_name/ "audio")
         audio_dir.mkdir(parents=True, exist_ok=True)
 
         hotspot_name = self.current_hotspot.name.strip() or f"hotspot_{self.current_hotspot.id}"

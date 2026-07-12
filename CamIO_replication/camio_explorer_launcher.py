@@ -38,7 +38,7 @@ def choose_camera(available):
 # list all .json files in the templates folder
 # NOTE: we still haven't decided the Creator app output file type/format, change if necessary when we do
 def list_available_templates():
-    return sorted(TEMPLATES_DIR.glob("*.json"))
+    return sorted(p for p in TEMPLATES_DIR.iterdir() if p.is_dir())
 
 
 # let user pick a template from the available template list
@@ -58,7 +58,7 @@ def main() -> None:
 
     print("====== CamIO Explorer ======\n")
 
-    print("Searching for available cameras...\n")
+    print("Searching for available cameras...")
     available_cameras = list_available_cameras()
     if not available_cameras:
         print("No cameras found.")

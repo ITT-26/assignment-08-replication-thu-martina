@@ -15,6 +15,8 @@ MISS_THRESHOLD = (
     45  # max number of frames the template can be lost (not all markers found)
 )
 
+SCREEN_FRACTION = 0.8  # in relation to screen dimentions
+
 MARKER_DICTIONARY = (
     aruco.DICT_ARUCO_ORIGINAL
 )  # to match the markers generated in the export/printable file from the Creator app's side
@@ -90,17 +92,27 @@ class ExplorerApp:
         self.pointing_point = None
         self.template_point = None
 
-        # pyglet - TODO: check window size
+        # pyglet
         cam_w = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         cam_h = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        self.window = pyglet.window.Window(cam_w, cam_h, caption="CamIO Explorer")
+        # figure out how big the window can be without exceeding the screen,
+        # preserving the camera's aspect ratio - same scaling pattern as
+        # compute_template_placement() in creator/exporter.py
+        display = pyglet.display.get_display()
+        screen = display.get_default_screen()
+        available_w = screen.width * SCREEN_FRACTION
+        available_h = screen.height * SCREEN_FRACTION
+        window_scale = min(available_w / cam_w, available_h / cam_h)
+        self.window_w = int(cam_w * window_scale)
+        self.window_h = int(cam_h * window_scale)
 
+        self.window = pyglet.window.Window(self.window_w, self.window_h, caption="CamIO Explorer")
         # NOTE: debug for now
         self.status_label = pyglet.text.Label(
             "Searching for markers...",
             font_size=16,
             x=10,
-            y=cam_h - 10,
+            y=self.window_h - 10,
             anchor_x="left",
             anchor_y="top",
             color=(255, 255, 255, 255),
@@ -160,7 +172,7 @@ class ExplorerApp:
         )
 
     def detect_pointing_gesture(self, frame):
-        # convert frame from BGR to RGB  
+        # convert frame from BGR to RGB
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         # convert into mp.Image
         mp_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
@@ -174,7 +186,7 @@ class ExplorerApp:
             return None
         else:
             hand_landmarks = result.hand_landmarks[0]
-            closed = draw_hand(frame,hand_landmarks) 
+            closed = draw_hand(frame, hand_landmarks)
 
         # pointing gesture -> all fingers closed/flexed except for the index
         pointing = (
@@ -198,16 +210,22 @@ class ExplorerApp:
         # point -> pointing coordinates related to captured camera w,h
         if point is None:
             return None
-        
+
         if self.transformation_matrix is None:
             return None
-         
-        point_np = np.array([[point]], dtype=np.float32) # format that perspectiveTransform() needs
-        transformed_point_np = cv2.perspectiveTransform(point_np, self.transformation_matrix)
-        transformed_point = (transformed_point_np[0][0][0], transformed_point_np[0][0][1])
+
+        point_np = np.array(
+            [[point]], dtype=np.float32
+        )  # format that perspectiveTransform() needs
+        transformed_point_np = cv2.perspectiveTransform(
+            point_np, self.transformation_matrix
+        )
+        transformed_point = (
+            transformed_point_np[0][0][0],
+            transformed_point_np[0][0][1],
+        )
 
         return transformed_point
-
 
     # NOTE: debug - draws a box around each detected marker and labels it with its ID
     def draw_marker_debug(self, frame, corners, ids):
@@ -238,7 +256,6 @@ class ExplorerApp:
         source = self.detect_board(frame)
 
         self.pointing_point = self.detect_pointing_gesture(frame)
-        # print(self.pointing_point) -- DEBUG
 
         self.template_point = self.map_to_template(self.pointing_point)
 
@@ -256,13 +273,13 @@ class ExplorerApp:
 
         # draw raw camera feed as background
         cam_img = cv2glet(frame, "BGR")
-        cam_img.blit(0, 0, 0)
+        cam_img.blit(0, 0, 0, width=self.window_w, height=self.window_h)
 
         # NOTE: debug - draw the warped result as a picture-in-picture in the
         # corner, just to visually confirm registration is correct
         # This debug feature was implemented with help of Claude AI (Anthropic)
         if self.transformation_matrix is not None:
-            warped = self.warp_frame(frame, self.transformation_matrix)
+            warped = self.warp_frame(frame, self.transformation_matrix)          
             warped_img = cv2glet(warped, "BGR")
             preview_w, preview_h = 240, int(240 * OUTPUT_HEIGHT / OUTPUT_WIDTH)
             warped_img.blit(
