@@ -1,8 +1,15 @@
+import time
 import pyglet
 import cv2
 import cv2.aruco as aruco
+from pathlib import Path
 import numpy as np
+import mediapipe as mp
+from mediapipe.tasks import python as mp_python
+from mediapipe.tasks.python import vision as mp_vision
 from PIL import Image
+
+from explorer.hand_landmark_drawer import draw_hand
 
 MISS_THRESHOLD = (
     45  # max number of frames the template can be lost (not all markers found)
@@ -11,6 +18,12 @@ MISS_THRESHOLD = (
 MARKER_DICTIONARY = (
     aruco.DICT_ARUCO_ORIGINAL
 )  # to match the markers generated using https://aruco-gen.netlify.app/
+
+MEDIAPIPE_MODEL_PATH = Path(__file__).resolve().parent / "hand_landmarker.task"
+
+NUM_HANDS = 1  # only one hand needed for pointing
+
+INDEX_TIP = 8  # landmark no. for the tip of the index finger
 
 # TODO: update once CamIO Creator's export format is defined
 OUTPUT_WIDTH = 800
@@ -63,6 +76,18 @@ class ExplorerApp:
         self.transformation_matrix = (
             None  # current camera -> template coordinate transformation
         )
+
+        # hand detection setup
+        hand_options = mp_vision.HandLandmarkerOptions(
+            base_options=mp_python.BaseOptions(
+                model_asset_path=str(MEDIAPIPE_MODEL_PATH)
+            ),
+            running_mode=mp_vision.RunningMode.VIDEO,
+            num_hands=NUM_HANDS,
+        )
+        self.hand_detector = mp_vision.HandLandmarker.create_from_options(hand_options)
+
+        self.pointing_point = None
 
         # pyglet - TODO: check window size
         cam_w = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -132,10 +157,41 @@ class ExplorerApp:
             (OUTPUT_WIDTH, OUTPUT_HEIGHT),
             flags=cv2.INTER_LINEAR,
         )
-    
-    def detect_pointing_gesture(self):
-        # index finger -> landmarks 5-8 (8: tip)
-        pass
+
+    def detect_pointing_gesture(self, frame):
+        # convert frame from BGR to RGB  
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        # convert into mp.Image
+        mp_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
+        # get timestamp in ms
+        timestamp_ms = int(time.time() * 1000)
+
+        # run the detector
+        result = self.hand_detector.detect_for_video(mp_frame, timestamp_ms)
+
+        if not result.hand_landmarks:
+            return None
+        else:
+            hand_landmarks = result.hand_landmarks[0]
+            closed = draw_hand(frame,hand_landmarks) 
+
+        # pointing gesture -> all fingers closed/flexed except for the index
+        pointing = (
+            not closed["index"]  # False
+            and closed["thumb"]  # True
+            and closed["middle"]  # True
+            and closed["ring"]  # True
+            and closed["pinky"]  # True
+        )  # will be True if condition is met
+
+        if not pointing:
+            return None
+        else:
+            height, width, _ = frame.shape
+            index_x = hand_landmarks[INDEX_TIP].x * width
+            index_y = hand_landmarks[INDEX_TIP].y * height
+            return index_x, index_y
+
 
     # NOTE: debug - draws a box around each detected marker and labels it with its ID
     def draw_marker_debug(self, frame, corners, ids):
@@ -165,6 +221,9 @@ class ExplorerApp:
 
         source = self.detect_board(frame)
 
+        self.pointing_point = self.detect_pointing_gesture(frame)
+        print(self.pointing_point)
+
         if source is not None:
             self.last_source = source
             self.miss_count = 0
@@ -177,12 +236,12 @@ class ExplorerApp:
                 self.transformation_matrix = None
             self.status_label.text = "Searching for markers..."  # NOTE: debug for now
 
-        # draw raw camera feed as backgrounf
+        # draw raw camera feed as background
         cam_img = cv2glet(frame, "BGR")
         cam_img.blit(0, 0, 0)
 
         # NOTE: debug - draw the warped result as a picture-in-picture in the
-        # corner, just to visually confirm registration is correct 
+        # corner, just to visually confirm registration is correct
         # This debug feature was implemented with help of Claude AI (Anthropic)
         if self.transformation_matrix is not None:
             warped = self.warp_frame(frame, self.transformation_matrix)

@@ -1,4 +1,4 @@
-# logic and landmark drawing adapted from a project I did in Argentina (playing rock-paper-scissors)
+# logic and landmark drawing adapted from a project I did in Argentina (playing rock-paper-scissors against the machine)
 
 import cv2
 from math import dist
@@ -57,24 +57,25 @@ def fingers_state(hand_landmarks) -> dict:
     return closed
 
 # paint landmarks red if finger is flexed - easy visual debug
+# Claude AI (Anthropic) was used to help draw the points and lines
 def draw_hand(frame, hand_landmarks) -> dict:
 
     height, width, _ = frame.shape
-    cerrados = fingers_state(hand_landmarks)
+    closed = fingers_state(hand_landmarks)
 
-    puntos = [(int(lm.x * width), int(lm.y * height)) for lm in hand_landmarks]
+    points = [(int(lm.x * width), int(lm.y * height)) for lm in hand_landmarks]
 
     for start_i, end_i in HAND_CONNECTIONS:
-        cv2.line(frame, puntos[start_i], puntos[end_i], LINE_COLOR, 2, cv2.LINE_AA)
+        cv2.line(frame, points[start_i], points[end_i], LINE_COLOR, 2, cv2.LINE_AA)
 
-    landmark_a_dedo = {i: nombre for nombre, indices in FINGERS.items() for i in indices}
+    landmark_to_finger = {i: name for name, indexes in FINGERS.items() for i in indexes}
 
-    for i, (x, y) in enumerate(puntos):
-        dedo = landmark_a_dedo.get(i)
-        if dedo is None:
+    for i, (x, y) in enumerate(points):
+        finger = landmark_to_finger.get(i)
+        if finger is None:
             color = WRIST_COLOR  
         else:
-            color = CLOSED_COLOR if cerrados[dedo] else OPEN_COLOR
+            color = CLOSED_COLOR if closed[finger] else OPEN_COLOR
         cv2.circle(frame, (x, y), 5, color, -1, cv2.LINE_AA)
 
-    return cerrados
+    return closed
