@@ -389,16 +389,17 @@ class CreatorWindow(QMainWindow):
             QLabel#panelTitle { font-size: 19px; font-weight: 700; color: #202020; }
             QLabel#hintText { color: #666666; }
             QLabel#audioLabel { color: #333333; padding: 6px; background: #ffffff; border: 1px solid #d0d0d0; border-radius: 4px; }
-            QListWidget#hotspotList { background: #ffffff; border: 1px solid #d4d4d4; border-radius: 4px; }
+            QListWidget#hotspotList { background: #ffffff; color: #202020; border: 1px solid #d4d4d4; border-radius: 4px; }
             QListWidget::item { padding: 8px; }
             QListWidget::item:selected { background: #e8f0fe; color: #111111; }
-            QLineEdit, QPlainTextEdit { background: #ffffff; border: 1px solid #cccccc; border-radius: 4px; padding: 6px; }
+            QLineEdit, QPlainTextEdit { background: #ffffff; color: #202020; border: 1px solid #cccccc; border-radius: 4px; padding: 6px; }
 
             QPushButton {
                 padding: 6px 10px;
                 border: 1px solid #c4c4c4;
                 border-radius: 5px;
                 background: #ffffff;
+                color: #202020;
             }
 
             QPushButton:hover {
