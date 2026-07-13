@@ -433,15 +433,15 @@ class CreatorWindow(QMainWindow):
         )
 
 
-def main() -> None:
+def main(asset_path: Path | None = None, mic: int | None = None) -> None:
     app = QApplication(sys.argv)
     base = Path(__file__).parent.parent
 
-    if len(sys.argv) > 2:
-        sd.default.device = int(sys.argv[2])  # mic input device index
+    if mic is not None:
+        sd.default.device = mic  # mic input device index
 
-    image_path = (Path(sys.argv[1]) if len(sys.argv) > 1 else base / "assets" / "body_anatomy.png")
-    
+    image_path = Path(asset_path) if asset_path is not None else base / "assets" / "body_anatomy.png"
+
     if not image_path.exists():
         raise FileNotFoundError(f"Template image not found: {image_path}")
     window = CreatorWindow(image_path)
