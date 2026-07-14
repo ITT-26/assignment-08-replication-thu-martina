@@ -1,5 +1,11 @@
-# CamIO Creator
-## Run
+# Documentation
+
+[add references to .md files that talk about paper selection, implementation discussion, demo video link]
+
+---
+# Replication: CamIO
+## CamIO Creator
+### Run
 Install the required packages:
 
 ```bash
@@ -27,7 +33,7 @@ If an exported project already exists for the selected template, it will be load
 
 ---
 
-## Export
+### Export
 
 Pressing Save changes creates (or updates) an export folder for the current template:
 output/
@@ -40,9 +46,9 @@ output/
 
 ---
 
-## On-screen instruction
+### On-screen instruction
 
-### Workflow
+#### Workflow
 
 1. Launch the Creator from the terminal and optionally specify a template image. The selected template will be displayed.
 2. Draw a hotspot by clicking around the object to create a polygon.
@@ -54,7 +60,7 @@ output/
    - Audio (browse for an existing file or record directly)
 6. Press **Save changes** to export the project.
 
-### Interface
+#### Interface
 
 - **Left panel**
   - Displays all created hotspots.
@@ -72,3 +78,11 @@ output/
   - Edit the hotspot's name and description.
   - Browse for an existing audio file or record a new one.
   - Save changes exports the project.
+
+---
+## CamIO Explorer
+[complete]
+
+---
+# Disclaimer - AI Usage
+[complete]
