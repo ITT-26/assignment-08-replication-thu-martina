@@ -19,6 +19,8 @@ MISS_THRESHOLD = (
     45  # max number of frames the template can be lost (not all markers found)
 )
 
+INTRO_DURATION = 10  # seconds the instructions overlay stays visible
+
 SCREEN_FRACTION = 0.8  # in relation to screen dimentions
 
 MARKER_DICTIONARY = (
@@ -92,7 +94,7 @@ def load_hotspots(project_dir, template_size):
                 "polygon": polygon,
             }
         )
-    return hotspots
+    return hotspots, data.get("name", "Untitled")
 
 
 class ExplorerApp:
@@ -103,7 +105,7 @@ class ExplorerApp:
         # hotspot / color map data
         template_path = Path(self.template_path) / "template.png"
         template_h, template_w = cv2.imread(str(template_path)).shape[:2]
-        self.hotspots = load_hotspots(self.template_path, (template_w, template_h))
+        self.hotspots, self.project_name = load_hotspots(self.template_path, (template_w, template_h))
 
         color_map_path = Path(self.template_path) / "color_map.png"
         self.color_map = cv2.imread(str(color_map_path))
@@ -162,7 +164,7 @@ class ExplorerApp:
         self.window_h = int(cam_h * window_scale)
 
         self.window = pyglet.window.Window(
-            self.window_w, self.window_h, caption="CamIO Explorer"
+            self.window_w, self.window_h, caption=f"CamIO Explorer - {self.project_name}"
         )
         # NOTE: debug for now
         self.status_label = pyglet.text.Label(
@@ -175,8 +177,26 @@ class ExplorerApp:
             color=(255, 255, 255, 255),
         )
 
+        # TODO: remove from init
+        # intro overlay: shows project name + controls briefly on startup
+        self.show_intro = True
+        pyglet.clock.schedule_once(self.hide_intro, INTRO_DURATION)
+
+        self.intro_label = pyglet.text.Label(
+            f"{self.project_name}\n\nPoint at the board with your index finger\nto hear each part described.\n\nPress 'q'/[ESC] to quit",
+            font_size=24,
+            x=self.window_w // 2,
+            y=self.window_h // 2,
+            anchor_x="center",
+            anchor_y="center",
+            color=(255, 255, 255, 255),
+            multiline=True,
+            width=self.window_w - 80,
+            align="center",
+        )
+
         # pyglet callbacks/handlers
-        self.window.push_handlers(on_draw=self.on_draw, on_close=self.on_close)
+        self.window.push_handlers(on_draw=self.on_draw, on_close=self.on_close, on_key_press=self.on_key_press)
 
     # board detection using ArUco markers - code adapted from Assignment 4 (Martina)
     def detect_board(self, frame):
@@ -356,7 +376,13 @@ class ExplorerApp:
             isClosed=True,
             color=(255, 255, 255),
             thickness=3,
-        )     
+        )   
+
+    # handle keyboard input
+    def on_key_press(self, symbol, modifiers):
+        # 'q' or [ESC] to quit
+        if symbol == pyglet.window.key.Q or symbol == pyglet.window.key.ESCAPE:
+            pyglet.app.exit()
 
     def on_draw(self):
         self.window.clear()
@@ -397,24 +423,6 @@ class ExplorerApp:
         cam_img = cv2glet(frame, "BGR")
         cam_img.blit(0, 0, 0, width=self.window_w, height=self.window_h)
 
-        # # NOTE: debug - draw the warped result as a picture-in-picture in the
-        # # corner, just to visually confirm registration is correct
-        # # This debug feature was implemented with help of Claude AI (Anthropic)
-        # if self.transformation_matrix is not None:
-        #     warped = self.warp_frame(frame, self.transformation_matrix)
-        #     self.draw_hotspot(warped, self.current_hotspot)
-        #     warped_img = cv2glet(warped, "BGR")
-        #     preview_w, preview_h = 240, int(
-        #         240 * self.output_height / self.output_width
-        #     )
-        #     warped_img.blit(
-        #         self.window.width - preview_w - 10,
-        #         10,
-        #         0,
-        #         width=preview_w,
-        #         height=preview_h,
-        #     )
-
         # main view: warped template once the board is registered; raw camera
         # feed as fallback while searching for markers
         if self.transformation_matrix is not None:
@@ -428,6 +436,12 @@ class ExplorerApp:
             self.fit_and_blit(main_img, cam_w, cam_h)
 
         self.status_label.draw()
+
+        if self.show_intro:
+            self.intro_label.draw()
+
+    def hide_intro(self, dt):
+        self.show_intro = False
 
     def on_close(self):
         self.cap.release()

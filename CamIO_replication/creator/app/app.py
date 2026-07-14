@@ -7,7 +7,7 @@ from pathlib import Path
 from shutil import copy2
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QColor, QKeySequence
-from PySide6.QtWidgets import (QApplication, QColorDialog, QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QPushButton, QPlainTextEdit, QSplitter, QToolBar, QVBoxLayout, QWidget,)
+from PySide6.QtWidgets import (QApplication, QColorDialog, QFileDialog, QFrame, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QPushButton, QPlainTextEdit, QSplitter, QToolBar, QVBoxLayout, QWidget,)
 
 from .canvas import CanvasView
 from .exporter import export_project
@@ -23,7 +23,14 @@ class CreatorWindow(QMainWindow):
         if project_file.exists():
             self.project = Project.load(project_file)
         else:
-            self.project = Project(template_path=image_path)
+            # new project - ask for a name
+            default_name = template_name.replace("_", " ").title()
+            project_name, ok = QInputDialog.getText(
+                self, "New project", "Project name:", QLineEdit.Normal, default_name
+            )
+            if not ok or not project_name.strip():
+                project_name = default_name
+            self.project = Project(template_path=image_path, name=project_name.strip())
         self.current_hotspot: Hotspot | None = None
         self._updating_inspector = False
 
@@ -33,14 +40,14 @@ class CreatorWindow(QMainWindow):
         self.sample_rate = 44100
         self.stream = None
 
-        self.setWindowTitle("CamIO Creator")
+        self.setWindowTitle(f"CamIO Creator - {self.project.name}")
         self.resize(1450, 900)
         self._build_ui()
         self.canvas.refresh_polygons()
         self.refresh_list()
         self._connect()
         self._apply_style()
-        self.statusBar().showMessage("Click on the image to create a hotspot.")
+        self.statusBar().showMessage("")
 
     def _build_ui(self) -> None:
         # Build the main application layout consisting of
@@ -75,7 +82,7 @@ class CreatorWindow(QMainWindow):
 
         title = QLabel("Hotspots")
         title.setObjectName("panelTitle")
-        hint = QLabel("Click directly on the image to add a region.")
+        hint = QLabel("Click directly on the image to add a region.\n\nPress [ENTER] to save, [ESC] to undo.")
         hint.setObjectName("hintText")
         hint.setWordWrap(True)
 
@@ -107,7 +114,7 @@ class CreatorWindow(QMainWindow):
         self.name_edit.setPlaceholderText("Region name")
 
         self.desc_edit = QPlainTextEdit()
-        self.desc_edit.setPlaceholderText("Description spoken or shown by Explorer")
+        self.desc_edit.setPlaceholderText("Description (optional)")
         self.desc_edit.setFixedHeight(110)
 
         audio_row = QWidget()
