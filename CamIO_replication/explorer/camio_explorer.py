@@ -13,26 +13,24 @@ import sounddevice as sd
 import soundfile as sf
 
 from explorer.hand_landmark_drawer import draw_hand
-from creator.app.exporter import get_printable_template_constants, PRINT_MARGIN, MARKER_SIZE
-
-MISS_THRESHOLD = (
-    45  # max number of frames the template can be lost (not all markers found)
+from creator.app.exporter import (
+    get_printable_template_constants,
+    PRINT_MARGIN,
+    MARKER_SIZE,
 )
 
-INTRO_DURATION = 10  # seconds the instructions overlay stays visible
+# Markers, detection
+MARKER_DICTIONARY = aruco.DICT_ARUCO_ORIGINAL # to match the markers generated in the export/printable file from the Creator app's side
+MISS_THRESHOLD = 45  # max number of frames the template can be lost (not all markers found)
 
-SCREEN_FRACTION = 0.8  # in relation to screen dimentions
-
-MARKER_DICTIONARY = (
-    aruco.DICT_ARUCO_ORIGINAL
-)  # to match the markers generated in the export/printable file from the Creator app's side
-
+# Mediapipe
 MEDIAPIPE_MODEL_PATH = Path(__file__).resolve().parent / "hand_landmarker.task"
-
 NUM_HANDS = 1  # only one hand needed for pointing
-
 INDEX_TIP = 8  # landmark no. for the tip of the index finger
 
+# Pyglet window
+SCREEN_FRACTION = 0.8  # in relation to screen dimentions
+INTRO_DURATION = 10  # seconds the instructions overlay stays visible
 TRANSPARENCY = 0.35  # alpha value for hotspot polygon fill
 
 
@@ -76,7 +74,6 @@ def load_hotspots(project_dir, template_size):
 
     # same scale/offset used by exporter.py when generating color_map.png,
     # needed here so the JSON polygons line up with warped coordinate space
-    # NOTE: maybe the creator app could export them directly? and keep the un-transformed ones as well for the creator
     scale, offset_x, offset_y = get_printable_template_constants(template_size)
 
     hotspots = []
@@ -105,7 +102,9 @@ class ExplorerApp:
         # hotspot / color map data
         template_path = Path(self.template_path) / "template.png"
         template_h, template_w = cv2.imread(str(template_path)).shape[:2]
-        self.hotspots, self.project_name = load_hotspots(self.template_path, (template_w, template_h))
+        self.hotspots, self.project_name = load_hotspots(
+            self.template_path, (template_w, template_h)
+        )
 
         color_map_path = Path(self.template_path) / "color_map.png"
         self.color_map = cv2.imread(str(color_map_path))
@@ -117,12 +116,11 @@ class ExplorerApp:
         self.cap = cv2.VideoCapture(self.camera_id)
         if not self.cap.isOpened():
             raise RuntimeError(f"Could not open camera {self.camera_id}")
-        
-        # request a higher capture resolution
+        # request a higher capture resolution 
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
-        # aruco markers setup - same as in Assignment 4
+        # aruco markers setup - same as in Assignment 4, but with a different dictionary
         self.aruco_dict = aruco.getPredefinedDictionary(MARKER_DICTIONARY)
         self.aruco_params = aruco.DetectorParameters()
         self.detector = aruco.ArucoDetector(self.aruco_dict, self.aruco_params)
@@ -164,39 +162,22 @@ class ExplorerApp:
         self.window_h = int(cam_h * window_scale)
 
         self.window = pyglet.window.Window(
-            self.window_w, self.window_h, caption=f"CamIO Explorer - {self.project_name}"
-        )
-        # NOTE: debug for now
-        self.status_label = pyglet.text.Label(
-            "...",
-            font_size=16,
-            x=10,
-            y=self.window_h - 10,
-            anchor_x="left",
-            anchor_y="top",
-            color=(255, 255, 255, 255),
+            self.window_w,
+            self.window_h,
+            caption=f"CamIO Explorer - {self.project_name}",
         )
 
-        # TODO: remove from init
-        # intro overlay: shows project name + controls briefly on startup
+        self.create_labels()
+        self.create_shapes()
+
+        # intro overlay timing: shows project name + controls briefly on startup
         self.show_intro = True
         pyglet.clock.schedule_once(self.hide_intro, INTRO_DURATION)
 
-        self.intro_label = pyglet.text.Label(
-            f"{self.project_name}\n\nPoint at the board with your index finger\nto hear each part described.\n\nPress 'q'/[ESC] to quit",
-            font_size=24,
-            x=self.window_w // 2,
-            y=self.window_h // 2,
-            anchor_x="center",
-            anchor_y="center",
-            color=(255, 255, 255, 255),
-            multiline=True,
-            width=self.window_w - 80,
-            align="center",
-        )
-
         # pyglet callbacks/handlers
-        self.window.push_handlers(on_draw=self.on_draw, on_close=self.on_close, on_key_press=self.on_key_press)
+        self.window.push_handlers(
+            on_draw=self.on_draw, on_close=self.on_close, on_key_press=self.on_key_press
+        )
 
     # board detection using ArUco markers - code adapted from Assignment 4 (Martina)
     def detect_board(self, frame):
@@ -228,7 +209,7 @@ class ExplorerApp:
 
         return np.array([top[0], top[1], bottom[0], bottom[1]])
 
-    # takes into account position of ArUco markers, and how the export is handled in creator app
+    # takes into account position of ArUco markers, and how the export is handled in creator app (margins, markers)
     def perspective_transformation(self, source):
         marker_offset = PRINT_MARGIN + MARKER_SIZE / 2
         destination = np.float32(
@@ -241,6 +222,7 @@ class ExplorerApp:
         )
         return cv2.getPerspectiveTransform(source, destination)
 
+    # get warped
     def warp_frame(self, frame, mat):
         return cv2.warpPerspective(
             frame,
@@ -248,9 +230,9 @@ class ExplorerApp:
             (self.output_width, self.output_height),
             flags=cv2.INTER_LINEAR,
         )
-    
-    # NOTE: AI assistance
+
     # function to fit an image inside a pyglet window preserving its aspect ratio
+    # NOTE: coded with AI assistance
     def fit_and_blit(self, img, img_w, img_h):
         scale = min(self.window_w / img_w, self.window_h / img_h)
         draw_w = int(img_w * scale)
@@ -259,6 +241,7 @@ class ExplorerApp:
         y = (self.window_h - draw_h) // 2
         img.blit(x, y, 0, width=draw_w, height=draw_h)
 
+    # detect gesture to trigger info feedback
     def detect_pointing_gesture(self, frame):
         # convert frame from BGR to RGB
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -315,6 +298,7 @@ class ExplorerApp:
 
         return transformed_point
 
+    # return the hotspot that is being pointed at based on color map
     def get_hotspot_at(self, point):
 
         if point is None:
@@ -333,15 +317,16 @@ class ExplorerApp:
                 return hotspot
 
         return None  # no associated color
-    
+
+    # play audio, if there is one
     def play_hotspot_audio(self, hotspot):
         if hotspot is None or hotspot["audio_path"] is None:
             return
         data, samplerate = sf.read(str(hotspot["audio_path"]))
-        sd.stop() 
+        sd.stop()
         sd.play(data, samplerate)
 
-    # NOTE: debug - draws a box around each detected marker and labels it with its ID
+    # draw a box around each detected marker and label it with its ID
     def draw_marker_debug(self, frame, corners, ids):
         if ids is None:
             return
@@ -360,11 +345,11 @@ class ExplorerApp:
                 cv2.LINE_AA,
             )
 
-    
+    # draw hotspot area on top of the shown img
     def draw_hotspot(self, warped, hotspot, alpha=TRANSPARENCY):
         if hotspot is None:
             return
-        
+
         overlay = warped.copy()
         # NOTE: AI helped with these two cv2 functions:
         cv2.fillPoly(overlay, [hotspot["polygon"]], color=hotspot["color"])
@@ -376,7 +361,7 @@ class ExplorerApp:
             isClosed=True,
             color=(255, 255, 255),
             thickness=3,
-        )   
+        )
 
     # handle keyboard input
     def on_key_press(self, symbol, modifiers):
@@ -384,6 +369,52 @@ class ExplorerApp:
         if symbol == pyglet.window.key.Q or symbol == pyglet.window.key.ESCAPE:
             pyglet.app.exit()
 
+    # pyglet labels
+    def create_labels(self):
+        self.hotspot_label = pyglet.text.Label(
+            "",
+            font_size=22,
+            x=self.window_w // 2,
+            y=self.window_h - 10,
+            anchor_x="center",
+            anchor_y="top",
+            color=(255, 255, 255, 255),
+        )
+
+        self.intro_label = pyglet.text.Label(
+            f"{self.project_name}\n\n"
+            "Point at the board with your index finger\nto hear each part described.\n\n"
+            "Press 'q' / [ESC] to quit",
+            font_size=24,
+            x=self.window_w // 2,
+            y=self.window_h // 2,
+            anchor_x="center",
+            anchor_y="center",
+            color=(255, 255, 255, 255),
+            multiline=True,
+            width=self.window_w - 80,
+            align="center",
+        )
+
+    # pyglet shapes
+    def create_shapes(self):
+        self.intro_overlay = pyglet.shapes.Rectangle(
+            0, 0, self.window_w, self.window_h, color=(0, 0, 0)
+        )
+        self.intro_overlay.opacity = 160
+
+    # update based on pointed hotspot
+    def update_status_label(self):
+        if self.current_hotspot is not None:
+            self.hotspot_label.text = f"● {self.current_hotspot['name']}"
+            self.hotspot_label.color = (
+                *self.current_hotspot["color"][::-1],
+                255,
+            )  # BGR -> RGB
+        else:
+            self.hotspot_label.text = ""
+
+    # on draw
     def on_draw(self):
         self.window.clear()
 
@@ -415,13 +446,7 @@ class ExplorerApp:
                 self.transformation_matrix = None
             # self.status_label.text = "Searching for markers..."  # NOTE: debug for now
 
-        # DEBUG visual feedback - TODO: paint hotspot on top of camera feedback
-        if self.current_hotspot is not None:
-            self.status_label.text = f"Pointing at: {self.current_hotspot['name']}"
-
-        # draw raw camera feed as background
-        cam_img = cv2glet(frame, "BGR")
-        cam_img.blit(0, 0, 0, width=self.window_w, height=self.window_h)
+        self.update_status_label()
 
         # main view: warped template once the board is registered; raw camera
         # feed as fallback while searching for markers
@@ -435,11 +460,13 @@ class ExplorerApp:
             cam_h, cam_w, _ = frame.shape
             self.fit_and_blit(main_img, cam_w, cam_h)
 
-        self.status_label.draw()
+        self.hotspot_label.draw()
 
         if self.show_intro:
-            self.intro_label.draw()
+            self.intro_overlay.draw()  # transparent black background
+            self.intro_label.draw()  # text
 
+    # hide instructions
     def hide_intro(self, dt):
         self.show_intro = False
 
