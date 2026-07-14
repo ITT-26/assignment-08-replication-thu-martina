@@ -30,7 +30,7 @@ INDEX_TIP = 8  # landmark no. for the tip of the index finger
 
 # Pyglet window
 SCREEN_FRACTION = 0.8  # in relation to screen dimentions
-INTRO_DURATION = 10  # seconds the instructions overlay stays visible
+INTRO_DURATION = 6  # seconds the instructions overlay stays visible
 TRANSPARENCY = 0.35  # alpha value for hotspot polygon fill
 
 
@@ -167,6 +167,9 @@ class ExplorerApp:
             caption=f"CamIO Explorer - {self.project_name}",
         )
 
+        # use framebuffer (physical pixel size) since on HiDPI/Retina displays (Mac) logical window size differs
+        self.fb_w, self.fb_h = self.window.get_framebuffer_size()
+
         self.create_labels()
         self.create_shapes()
 
@@ -234,11 +237,11 @@ class ExplorerApp:
     # function to fit an image inside a pyglet window preserving its aspect ratio
     # NOTE: coded with AI assistance
     def fit_and_blit(self, img, img_w, img_h):
-        scale = min(self.window_w / img_w, self.window_h / img_h)
+        scale = min(self.fb_w / img_w, self.fb_h / img_h)
         draw_w = int(img_w * scale)
         draw_h = int(img_h * scale)
-        x = (self.window_w - draw_w) // 2
-        y = (self.window_h - draw_h) // 2
+        x = (self.fb_w - draw_w) // 2
+        y = (self.fb_h - draw_h) // 2
         img.blit(x, y, 0, width=draw_w, height=draw_h)
 
     # detect gesture to trigger info feedback
@@ -374,8 +377,8 @@ class ExplorerApp:
         self.hotspot_label = pyglet.text.Label(
             "",
             font_size=22,
-            x=self.window_w // 2,
-            y=self.window_h - 10,
+            x=self.fb_w // 2,
+            y=self.fb_h - 10,
             anchor_x="center",
             anchor_y="top",
             color=(255, 255, 255, 255),
@@ -386,13 +389,13 @@ class ExplorerApp:
             "Point at the board with your index finger\nto hear each part described.\n\n"
             "Press 'q' / [ESC] to quit",
             font_size=24,
-            x=self.window_w // 2,
-            y=self.window_h // 2,
+            x=self.fb_w // 2,
+            y=self.fb_h // 2,
             anchor_x="center",
             anchor_y="center",
             color=(255, 255, 255, 255),
             multiline=True,
-            width=self.window_w - 80,
+            width=self.fb_w - 80,
             align="center",
         )
 
