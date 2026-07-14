@@ -13,6 +13,7 @@ import sounddevice as sd
 import soundfile as sf
 
 from explorer.hand_landmark_drawer import draw_hand
+from creator.app.exporter import get_printable_template_constants
 
 MISS_THRESHOLD = (
     45  # max number of frames the template can be lost (not all markers found)
@@ -29,6 +30,8 @@ MEDIAPIPE_MODEL_PATH = Path(__file__).resolve().parent / "hand_landmarker.task"
 NUM_HANDS = 1  # only one hand needed for pointing
 
 INDEX_TIP = 8  # landmark no. for the tip of the index finger
+
+TRANSPARENCY = 0.35  # alpha value for hotspot polygon fill
 
 
 # OpenCV -> pyglet function given in Assignment 4
@@ -64,19 +67,29 @@ def hex_to_bgr(hex_color):
 
 
 # function to retrieve relevant info from Creator app's json output file
-def load_hotspots(project_dir):
+def load_hotspots(project_dir, template_size):
     project_dir = Path(project_dir)
     json_path = project_dir / "project.camio.json"
     data = json.loads(json_path.read_text())
 
+    # same scale/offset used by exporter.py when generating color_map.png,
+    # needed here so the JSON polygons line up with warped coordinate space
+    # NOTE: maybe the creator app could export them directly? and keep the un-transformed ones as well for the creator
+    scale, offset_x, offset_y = get_printable_template_constants(template_size)
+
     hotspots = []
     for h in data["hotspots"]:
         audio_path = project_dir / h["audio"] if h["audio"] else None
+        polygon = np.array(
+            [[x * scale + offset_x, y * scale + offset_y] for x, y in h["polygon"]],
+            dtype=np.int32,
+        )
         hotspots.append(
             {
                 "name": h["name"],
                 "color": hex_to_bgr(h["color"]),
                 "audio_path": audio_path,
+                "polygon": polygon,
             }
         )
     return hotspots
@@ -88,7 +101,10 @@ class ExplorerApp:
         self.template_path = template_path
 
         # hotspot / color map data
-        self.hotspots = load_hotspots(self.template_path)
+        template_path = Path(self.template_path) / "template.png"
+        template_h, template_w = cv2.imread(str(template_path)).shape[:2]
+        self.hotspots = load_hotspots(self.template_path, (template_w, template_h))
+
         color_map_path = Path(self.template_path) / "color_map.png"
         self.color_map = cv2.imread(str(color_map_path))
         self.output_height, self.output_width = self.color_map.shape[:2]
@@ -309,6 +325,24 @@ class ExplorerApp:
                 cv2.LINE_AA,
             )
 
+    
+    def draw_hotspot(self, warped, hotspot, alpha=TRANSPARENCY):
+        if hotspot is None:
+            return
+        
+        overlay = warped.copy()
+        # NOTE: AI helped with these two cv2 functions:
+        cv2.fillPoly(overlay, [hotspot["polygon"]], color=hotspot["color"])
+        cv2.addWeighted(overlay, alpha, warped, 1 - alpha, 0, dst=warped)
+
+        cv2.polylines(
+            warped,
+            [hotspot["polygon"]],
+            isClosed=True,
+            color=(255, 255, 255),
+            thickness=3,
+        )     
+
     def on_draw(self):
         self.window.clear()
 
@@ -353,6 +387,7 @@ class ExplorerApp:
         # This debug feature was implemented with help of Claude AI (Anthropic)
         if self.transformation_matrix is not None:
             warped = self.warp_frame(frame, self.transformation_matrix)
+            self.draw_hotspot(warped, self.current_hotspot)
             warped_img = cv2glet(warped, "BGR")
             preview_w, preview_h = 240, int(
                 240 * self.output_height / self.output_width
