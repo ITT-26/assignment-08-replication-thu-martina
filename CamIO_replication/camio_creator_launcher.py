@@ -13,10 +13,10 @@ DEFAULT_ASSET = Path(__file__).resolve().parent / "creator" / "assets" / "body_a
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="CamIO Creator launcher")
     parser.add_argument(
-        "--asset",
+        "--template",
         type=Path,
         default=DEFAULT_ASSET,
-        help="Path to the asset image to annotate.",
+        help="Path to the template image to annotate.",
     )
     parser.add_argument(
         "--mic",
@@ -29,4 +29,4 @@ def parse_args() -> argparse.Namespace:
 
 if __name__ == "__main__":
     args = parse_args()
-    main(args.asset, args.mic)
+    main(args.template, args.mic)
