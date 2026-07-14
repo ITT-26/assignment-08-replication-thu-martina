@@ -1,7 +1,7 @@
 # Implementation Approach
 
 Our goal was not to reproduce the complete CamIO-Web system, but to implement its main interaction technique: creating interactive hotspot regions on an image and later exploring a printed version through camera-based pointing gestures.
-To make the implementation manageable within the assignment period, we divided the project into two independent applications: **Creator** and **Explorer**.
+To make the implementation manageable within the assignment period, we divided the project into two independent applications: **Creator** (Thu) and **Explorer** (Martina).
 
 ## Creator
 
@@ -16,7 +16,7 @@ The application stores all hotspot information in a `project.camio.json` file. E
 
 When exporting a project, the Creator automatically generates:
 - the original template image
-- a printable template with ArUco markers
+- a printable template with ArUco markers (both png and pdf formats)
 - a color map image
 - the project JSON
 - recorded audio files
