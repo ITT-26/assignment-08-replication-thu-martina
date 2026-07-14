@@ -18,10 +18,10 @@ Start the Creator with the default template:
 python camio_creator_launcher.py
 ```
 
-Or specify another template image:
+Or specify another template image/microphone:
 
 ```bash
-python camio_creator_launcher.py assets/eukaryotic-cells.png
+python camio_creator_launcher.py [--template TEMPLATE] [--mic MIC]
 ```
 
 Supported input formats:
@@ -35,14 +35,21 @@ If an exported project already exists for the selected template, it will be load
 
 ### Export
 
-Pressing Save changes creates (or updates) an export folder for the current template:
-output/
+Press **Save changes** to export the current project.
+
+A folder named after the template is created (or updated) inside the `templates` directory:
+
+```text
+templates/
 └── <template_name>/
     ├── project.camio.json
     ├── color_map.png
     ├── printable_template.png
     ├── template.png
     └── audio/
+```
+
+The exported project can be opened directly by the Explorer application.
 
 ---
 
