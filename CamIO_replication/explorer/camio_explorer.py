@@ -223,6 +223,16 @@ class ExplorerApp:
             (self.output_width, self.output_height),
             flags=cv2.INTER_LINEAR,
         )
+    
+    # NOTE: AI assistance
+    # function to fit an image inside a pyglet window preserving its aspect ratio
+    def fit_and_blit(self, img, img_w, img_h):
+        scale = min(self.window_w / img_w, self.window_h / img_h)
+        draw_w = int(img_w * scale)
+        draw_h = int(img_h * scale)
+        x = (self.window_w - draw_w) // 2
+        y = (self.window_h - draw_h) // 2
+        img.blit(x, y, 0, width=draw_w, height=draw_h)
 
     def detect_pointing_gesture(self, frame):
         # convert frame from BGR to RGB
@@ -382,23 +392,35 @@ class ExplorerApp:
         cam_img = cv2glet(frame, "BGR")
         cam_img.blit(0, 0, 0, width=self.window_w, height=self.window_h)
 
-        # NOTE: debug - draw the warped result as a picture-in-picture in the
-        # corner, just to visually confirm registration is correct
-        # This debug feature was implemented with help of Claude AI (Anthropic)
+        # # NOTE: debug - draw the warped result as a picture-in-picture in the
+        # # corner, just to visually confirm registration is correct
+        # # This debug feature was implemented with help of Claude AI (Anthropic)
+        # if self.transformation_matrix is not None:
+        #     warped = self.warp_frame(frame, self.transformation_matrix)
+        #     self.draw_hotspot(warped, self.current_hotspot)
+        #     warped_img = cv2glet(warped, "BGR")
+        #     preview_w, preview_h = 240, int(
+        #         240 * self.output_height / self.output_width
+        #     )
+        #     warped_img.blit(
+        #         self.window.width - preview_w - 10,
+        #         10,
+        #         0,
+        #         width=preview_w,
+        #         height=preview_h,
+        #     )
+
+        # main view: warped template once the board is registered; raw camera
+        # feed as fallback while searching for markers
         if self.transformation_matrix is not None:
             warped = self.warp_frame(frame, self.transformation_matrix)
             self.draw_hotspot(warped, self.current_hotspot)
-            warped_img = cv2glet(warped, "BGR")
-            preview_w, preview_h = 240, int(
-                240 * self.output_height / self.output_width
-            )
-            warped_img.blit(
-                self.window.width - preview_w - 10,
-                10,
-                0,
-                width=preview_w,
-                height=preview_h,
-            )
+            main_img = cv2glet(warped, "BGR")
+            self.fit_and_blit(main_img, self.output_width, self.output_height)
+        else:
+            main_img = cv2glet(frame, "BGR")
+            cam_h, cam_w, _ = frame.shape
+            self.fit_and_blit(main_img, cam_w, cam_h)
 
         self.status_label.draw()
 
