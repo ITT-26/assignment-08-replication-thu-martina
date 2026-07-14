@@ -13,7 +13,7 @@ import sounddevice as sd
 import soundfile as sf
 
 from explorer.hand_landmark_drawer import draw_hand
-from creator.app.exporter import get_printable_template_constants
+from creator.app.exporter import get_printable_template_constants, PRINT_MARGIN, MARKER_SIZE
 
 MISS_THRESHOLD = (
     45  # max number of frames the template can be lost (not all markers found)
@@ -115,6 +115,10 @@ class ExplorerApp:
         self.cap = cv2.VideoCapture(self.camera_id)
         if not self.cap.isOpened():
             raise RuntimeError(f"Could not open camera {self.camera_id}")
+        
+        # request a higher capture resolution
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
         # aruco markers setup - same as in Assignment 4
         self.aruco_dict = aruco.getPredefinedDictionary(MARKER_DICTIONARY)
@@ -204,14 +208,15 @@ class ExplorerApp:
 
         return np.array([top[0], top[1], bottom[0], bottom[1]])
 
+    # takes into account position of ArUco markers, and how the export is handled in creator app
     def perspective_transformation(self, source):
-        # destination points (TL, TR, BL, BR), same order as source
+        marker_offset = PRINT_MARGIN + MARKER_SIZE / 2
         destination = np.float32(
             [
-                [0, 0],
-                [self.output_width, 0],
-                [0, self.output_height],
-                [self.output_width, self.output_height],
+                [marker_offset, marker_offset],
+                [self.output_width - marker_offset, marker_offset],
+                [marker_offset, self.output_height - marker_offset],
+                [self.output_width - marker_offset, self.output_height - marker_offset],
             ]
         )
         return cv2.getPerspectiveTransform(source, destination)
