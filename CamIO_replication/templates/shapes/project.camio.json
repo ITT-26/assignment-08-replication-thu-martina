@@ -1,7 +1,7 @@
 {
   "format": "camio-creator-replica",
   "version": 2,
-  "name": "Shapes",
+  "name": "Shapes Demo",
   "source_template": "creator/assets/shapes.png",
   "template": "template.png",
   "color_map": "color_map.png",

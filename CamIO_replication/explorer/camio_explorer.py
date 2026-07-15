@@ -325,9 +325,17 @@ class ExplorerApp:
     def play_hotspot_audio(self, hotspot):
         if hotspot is None or hotspot["audio_path"] is None:
             return
-        data, samplerate = sf.read(str(hotspot["audio_path"]))
-        sd.stop()
-        sd.play(data, samplerate)
+
+        if not hotspot["audio_path"].exists():
+            print(f"[warning] missing audio file for '{hotspot['name']}': {hotspot['audio_path']}")
+            return
+
+        try:
+            data, samplerate = sf.read(str(hotspot["audio_path"]))
+            sd.stop()
+            sd.play(data, samplerate)
+        except Exception as e:
+            print(f"[warning] could not play audio for '{hotspot['name']}': {e}")  # fix so that the app doesn't crash if the audio file is corrupt
 
     # draw a box around each detected marker and label it with its ID
     def draw_marker_debug(self, frame, corners, ids):
