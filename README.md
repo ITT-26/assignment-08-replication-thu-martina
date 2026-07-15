@@ -22,6 +22,10 @@ CamIO_replication/
 
 ## Implementation
 
+### Requirements
+
+- Python 3.13.2 (tested with Creator and Explorer)
+
 ### CamIO Creator
 
 #### Run
@@ -115,13 +119,13 @@ The exported project can be opened directly by the Explorer application.
 Install the required packages:
 
 ```bash
-cd CamIO_replication
 pip install -r explorer_requirements.txt
 ```
 
 Start the Explorer with the default template:
 
 ```bash
+cd CamIO_replication
 python camio_explorer_launcher.py
 ```
 
