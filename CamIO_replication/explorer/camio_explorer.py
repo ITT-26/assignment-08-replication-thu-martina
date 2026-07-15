@@ -410,7 +410,7 @@ class ExplorerApp:
     # pyglet shapes
     def create_shapes(self):
         self.intro_overlay = pyglet.shapes.Rectangle(
-            0, 0, self.window_w, self.window_h, color=(0, 0, 0)
+            0, 0, self.fb_w, self.fb_h, color=(0, 0, 0)
         )
         self.intro_overlay.opacity = 160
 
