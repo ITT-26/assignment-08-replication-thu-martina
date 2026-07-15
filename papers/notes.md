@@ -1,20 +1,16 @@
-# Assignment 08 - Replication
+# Finding suitable research papers
 
-Group members: Thu, Martina
-
-## Finding suitable research papers
-
-### [CamIO in the Browser - A Cross-Platform Audio Label Tool for Tactile Graphics](CamIO.pdf)
+## [CamIO in the Browser - A Cross-Platform Audio Label Tool for Tactile Graphics](CamIO.pdf)
 
 Dragan Ahmetovic, James Coughlan, Giorgio Dal Santo, Khadija Ezrouri, Matteo Manzoni, and Sergio Mascetti. 2025. CamIO in the Browser: A Cross-Platform Audio Label Tool for Tactile Graphics. In Adjunct Proceedings of the 27th International Conference on Mobile Human-Computer Interaction (MobileHCI '25 Adjunct). Association for Computing Machinery, New York, NY, USA, Article 21, 1–3. https://doi.org/10.1145/3737821.3748528
 
-#### What is the paper about?
+### What is the paper about?
 
 CamIO-Web is an open-source, browser-based audio labeling system for tactile graphics (TGs), designed to help blind and low-vision users explore physical drawings and diagrams. It consists of two components: CamIO-Creator, which lets a sighted user define labeled "hotspot" regions on a template image, and CamIO-Explorer, which runs in real time using template matching to locate the TG in the camera feed and the MediaPipe hand landmarker to detect a pointing gesture, mapping the touched location back to the template to play the corresponding audio label.
 
-#### Notes on 2-week implementation for ITT
+### Notes on 2-week implementation for ITT
 
-##### Parts of the system (CamIO-Web)
+#### Parts of the system (CamIO-Web)
 **CamIO-Explorer**
 
 - Detection of the template area in the captured camera frame
@@ -36,28 +32,24 @@ Their software also has a feature that allows users to label their own TGs. The 
 > 
 > Maybe we can include the PDF to print in the exports, and add the ArUco markers for easier mapping later.
 
-##### Some thoughts
+#### Some other thoughts
 - Is it an interaction technique itself? No. But the tool uses camera-based pointing interaction.
 - Using our laptops' webcams might be difficult if we want users to be able to point at the template while it is laying on top of a horizontal surface such as a table (and this is the way it would make sense to use the system I think, since it is intended for visually-impaired people). We could try to use our phones as input devices and a tripod, or somethig along these lines.
 - Watch the resolution/scale consistency between digital template and the printed+photographed version for correct mapping.
 
-
-
-
-
 ---
 
-### [Textoshop: Interactions Inspired by Drawing Software to Facilitate Text Editing](Textoshop.pdf)
+## [Textoshop: Interactions Inspired by Drawing Software to Facilitate Text Editing](Textoshop.pdf)
 
 Damien Masson, Young-Ho Kim, and Fanny Chevalier. 2025. Textoshop: Interactions Inspired by Drawing Software to Facilitate Text Editing. Proceedings of the 2025 CHI Conference on Human Factors in Computing Systems (CHI '25). https://doi.org/10.1145/3706598.3713862
 
-#### What is the paper about?
+### What is the paper about?
 
 Textoshop explores a new way of editing text by borrowing interaction techniques from drawing and image editing software such as Adobe Photoshop. Instead of relying on traditional text-editing operations (select, cut, copy, paste), text fragments become directly manipulable objects that can be dragged, resized, rotated, combined, or edited using tools such as brushes and layers. Large Language Models (LLMs) act as the backend that interprets these interactions and rewrites the selected text while preserving the user's intent.
 
-#### Notes on 2-week implementation for ITT
+### Notes on 2-week implementation for ITT
 
-##### Possible interactions to replicate
+#### Possible interactions to replicate
 
 **Direct Manipulation**
 
@@ -85,7 +77,7 @@ Textoshop explores a new way of editing text by borrowing interaction techniques
 
 ---
 
-##### Possible implementation
+#### Possible implementation
 
 Frontend
 
@@ -111,7 +103,7 @@ Example mapping
 - Rotate → Reorder sentence while preserving meaning
 - Tone Brush → Rewrite text according to selected writing style
 
-##### Some thoughts
+#### Some other thoughts
 
 - The contribution of the paper is the interaction technique rather than the LLM itself.
 - We do not need to replicate the complete editor. Implementing two or three core interactions should already demonstrate the main idea.
