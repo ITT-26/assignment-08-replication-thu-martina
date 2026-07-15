@@ -7,7 +7,7 @@ from pathlib import Path
 
 from creator.app.app import main
 
-DEFAULT_ASSET = Path(__file__).resolve().parent / "creator" / "assets" / "body_anatomy.png"
+DEFAULT_ASSET = Path(__file__).resolve().parent / "creator" / "assets" / "shapes.png"
 
 
 def parse_args() -> argparse.Namespace:

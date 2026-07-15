@@ -10,7 +10,7 @@ import pyglet
 from explorer.camio_explorer import ExplorerApp
 
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
-DEFAULT_OUTPUT = TEMPLATES_DIR / "body_anatomy"
+DEFAULT_OUTPUT = TEMPLATES_DIR / "shapes"
 
 
 def parse_args() -> argparse.Namespace:
